@@ -1,0 +1,69 @@
+Question 1: By default, are Django signals executed synchronously or asynchronously?By default, Django signals are executed synchronously. This means that the signal handlers are called immediately, within the same thread as the signal sender, before the sender proceeds.Code Snippet:# models.py
+from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+import time
+
+class MyModel(models.Model):
+    name = models.CharField(max_length=100)
+
+@receiver(post_save, sender=MyModel)
+def my_handler(sender, instance, **kwargs):
+    print("Handler started")
+    time.sleep(5)  # Simulate a time-consuming task
+    print("Handler finished")
+
+# Usage in Django shell or view
+instance = MyModel(name="Test")
+instance.save()
+print("Save finished")Output:Handler started
+Handler finished
+Save finishedThe output shows that "Handler finished" is printed before "Save finished", indicating that the handler is executed synchronously.Question 2: Do Django signals run in the same thread as the caller?Yes, Django signals run in the same thread as the caller.Code Snippet:# models.py
+from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+import threading
+
+class MyModel(models.Model):
+    name = models.CharField(max_length=100)
+
+@receiver(post_save, sender=MyModel)
+def my_handler(sender, instance, **kwargs):
+    print(f"Handler thread: {threading.current_thread().name}")
+
+# Usage in Django shell or view
+print(f"Main thread: {threading.current_thread().name}")
+instance = MyModel(name="Test")
+instance.save()Output:Main thread: MainThread
+Handler thread: MainThreadThe output shows that both the main execution and the signal handler run in the "MainThread", indicating they run in the same thread.Question 3: By default, do Django signals run in the same database transaction as the caller?By default, Django signals run in the same database transaction as the caller, if the signal is emitted within a transaction.Code Snippet:# models.py
+from django.db import models, transaction
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+class MyModel(models.Model):
+    name = models.CharField(max_length=100)
+
+@receiver(post_save, sender=MyModel)
+def my_handler(sender, instance, **kwargs):
+    if transaction.get_connection().in_atomic_block:
+        print("Handler is in the same transaction")
+    else:
+        print("Handler is not in the same transaction")
+
+# Usage in Django shell or view
+with transaction.atomic():
+    instance = MyModel(name="Test")
+    instance.save()Output:Handler is in the same transactionThe output indicates that the handler runs within the same transaction context as the caller.Custom Classes in PythonDescription:Create a Rectangle class that can be iterated over, yielding its length and width in a specific format.Implementation:class Rectangle:
+    def __init__(self, length: int, width: int):
+        self.length = length
+        self.width = width
+
+    def __iter__(self):
+        yield {'length': self.length}
+        yield {'width': self.width}
+
+# Usage
+rect = Rectangle(10, 5)
+for dimension in rect:
+    print(dimension)Output:{'length': 10}
+{'width': 5}This implementation defines the Rectangle class with an __iter__ method to yield the dimensions in the required format when iterated over.
